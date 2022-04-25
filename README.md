@@ -66,11 +66,11 @@ For ex:  (-4.5, -4.5) ---> (5, 5)
      roslaunch proj3_phase2_okritvik_amalapak turtlebot3_661_proj3.launch x_pos:=-4.5 y_pos:=-4.5 z_pos:=0.0
      
      Enter the robot's clearance: 1
- 		 Enter Left Wheel Velocity in RPM: 200
- 		 Enter Right Wheel Velocity in RPM: 300
-		 Enter the X Coordinate of the Start Node: 5
- 		 Enter the Y Coordinate of the Start Node: 5
- 		 Enter the X Coordinate of the Goal Node: 60
- 		 Enter the Y Coordinate of the Goal Node: 5
- 		 Enter the Initial Head Angle: 0 
+     Enter Left Wheel Velocity in RPM: 200
+     Enter Right Wheel Velocity in RPM: 300
+     Enter the X Coordinate of the Start Node: 5
+     Enter the Y Coordinate of the Start Node: 5
+     Enter the X Coordinate of the Goal Node: 60
+     Enter the Y Coordinate of the Goal Node: 5
+     Enter the Initial Head Angle: 0 
      ```
