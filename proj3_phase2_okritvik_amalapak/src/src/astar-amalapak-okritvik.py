@@ -13,26 +13,22 @@ import time
 import cv2
 import numpy as np
 import heapq as hq
-import matplotlib.pyplot as plt
 import rospy
 from geometry_msgs.msg import Twist
 
-# ROS Publisher 
+
+# ROS Velocity Publisher 
 vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=100)
 rospy.init_node('a_star_pub', anonymous=True)
 rate = rospy.Rate(100)
 twist = Twist()
 
+
 def take_robot_inputs():
-    """
+    '''
     Gets the robot radius and clearance inputs from the user.
-                
-    Parameters:
-        None
-    Returns:
-        clearance: int
-                Robot's clearance
-    """
+    '''
+    
     clearance = 0
     robot_radius = 0
     left_wheel_vel = 0
@@ -61,18 +57,10 @@ def take_robot_inputs():
 
 
 def take_map_inputs():
-    """
+    '''
     Gets the initial node, final node coordinates, heading angles and step-size from the user.
-                
-    Parameters:
-        canvas: NumPy array
-                Map matrix
-    Returns:
-        initial_state: List
-                List to hold the initial node coordinates and heading angle
-        final_state: List 
-                List to hold the final node coordinates and heading angle
-    """
+    '''
+    
     initial_state = []
     final_state = []
     initial_angle = 0
@@ -95,7 +83,7 @@ def take_map_inputs():
                 initial_state.append(float(state))
                 break
         
-        if(draw_obstacles(initial_state)):
+        if(check_obstacles(initial_state)):
             print("*** The entered start node is in the Obstacle Space! ***")
             initial_state.clear()
         else:
@@ -119,7 +107,7 @@ def take_map_inputs():
                 final_state.append(float(state))
             break
 
-        if(draw_obstacles(final_state)):
+        if(check_obstacles(final_state)):
             print("*** The entered goal node is in the obstacle space! ***")
             final_state.clear()
         else:
@@ -140,19 +128,11 @@ def take_map_inputs():
     return initial_state,final_state
 
 
-def draw_obstacles(point, offset = 10):
-    """
-    Draws the obstacles and walls in the map incorporating the robot's offset.
-                
-    Parameters:
-        canvas: NumPy array
-                Map matrix
-        offset: int
-                Offset is robot radius + clearance 
-    Returns:
-        canvas: NumPy array
-                Map matrix with drawn obstacles
-    """
+def check_obstacles(point, offset = 10):
+    '''
+    Checks if the given point is in the the obstacle space.
+    '''
+    
     i = point[0]
     j = point[1]
     
@@ -177,72 +157,30 @@ def draw_obstacles(point, offset = 10):
     return False
 
 
-def threshold(num):
-    """
-    Rounds the given number to the nearest 0.5 value.
-    For ex: 4.61 is rounded to 4.5 whereas 4.8 is rounded to 5.0.
-                
-    Parameters:
-        num: float
-                Number to be rounded
-    Returns:
-        num: float
-                Number rounded to nearest 0.5
-    """
-    return round(num*2)/2
-
-
 def check_goal(node, final):
-    """
-    Checks if the given current node is within the goal node's threshold distance of 1.5.
-                
-    Parameters:
-        node: List
-                Current node
-        final: List
-                Goal node 
-    Returns:
-        flag: bool
-                True if the present node is the goal node, False otherwise
-    """
-    if(np.sqrt(np.power(node[0]-final[0],2)+np.power(node[1]-final[1],2))<5):
+    '''
+    Checks if the given current node is within the goal node's threshold distance of 1.5.            
+    '''
+
+    if(np.sqrt(np.power(node[0]-final[0],2)+np.power(node[1]-final[1],2)) < 1.5):
         return True
     else:
         return False
 
 
 def cost_to_goal(node, final):
-    """
+    '''
     Computes the Cost To Goal between present and goal nodes using a Euclidean distance heuristic.
-                
-    Parameters:
-        node: List
-                Current node
-        final: List
-                Goal node 
-    Returns:
-        flag: bool
-                True if the present node is the goal node, False otherwise
-    """
+    '''
+    
     return 4*np.sqrt(np.power(node[0]-final[0],2)+np.power(node[1]-final[1],2))
 
 
 def check_obstacle(next_width, next_height, canvas):    
-    """
+    '''
     Checks if the generated/next node is in the obstacle region.
-              
-    Parameters:
-        next_width: float
-                Width of the next node from the present node
-        next_height: float
-                Height of the next node from the present node
-        
-        canvas: NumPy array
-                Map matrix with drawn obstacles 
-    Returns:
-        flag: bool
-                True if the next node is NOT in the obstacle region, False otherwise
-    """
+    '''
+    
     if int(round(next_height))<0 or int(round(next_width))<0 or int(round(next_height))>=canvas.shape[0] or int(round(next_width))>=canvas.shape[1] or canvas[int(round(next_height))][int(round(next_width))][0]==255:
         return False
     else:
@@ -250,27 +188,9 @@ def check_obstacle(next_width, next_height, canvas):
 
 
 def action(node, vel_l, vel_r, R, L):    # Local angles
-    """
+    '''
     Moves the robot at 0 degree angle (wrt robot's frame) by the step amount. 
-              
-    Parameters:
-        node: List
-                List of node's x, y and theta parameters
-        
-        canvas: NumPy array
-                Map matrix with drawn obstacles 
-        visited: NumPy array
-                Visited matrix of size 500x800x12 to keep track of duplicate nodes  
-        step: int
-               Step size of the robot 
-    Returns:
-        Next Node flag: bool
-                True if the child node can be generated, False otherwise
-        next_node: List
-                Child node generated after performing the action
-        Duplicate Node flag: bool
-                True if generated next node is already visited, False otherwise
-    """
+    '''
     next_node = node.copy()
     
     trajectory_list = []
@@ -297,7 +217,7 @@ def action(node, vel_l, vel_r, R, L):    # Local angles
 
         cost += np.abs(x-x_init) + np.abs(y-y_init)    # Manhattan Distance
         
-        if not draw_obstacles([x,y]):
+        if not check_obstacles([x,y]):
             trajectory_list.append((x,y,theta))
         else:
             return False, trajectory_list.copy(), next_node, cost, velocity_list.copy()
@@ -311,26 +231,13 @@ def action(node, vel_l, vel_r, R, L):    # Local angles
     return True, trajectory_list.copy(), next_node, cost, velocity_list.copy()
 
 
-def astar(initial_state, final_state,vel_l, vel_r, R, L):
-    """
+def astar(initial_state, final_state,vel_l, vel_r, R, L, canvas):
+    '''
     Implements the A* algorithm to find the path between the user-given start node and goal node.  
     It is robust enough to raise a 'no solution' prompt for goal/start states in the obstacle space.
     The open list is a heap queue which uses the Total Cost as the key to sort the heap.
     The closed list is a dictionary with key as the current node and value as the parent node.
-    
-    Parameters:
-        initial_state: List
-                List of start node's x, y and theta parameters
-        
-        final_state: List
-                List of goal node's x, y and theta parameters 
-        canvas: NumPy array
-                Map matrix with drawn obstacles  
-        step: int
-               Step size of the robot 
-    Returns:
-            None
-    """
+    '''
     open_list = []    # Format: {(TotalCost): CostToCome, CostToGo, PresentNode, ParentNode}
     closed_list = {}    # Format: {(PresentNode): ParentNode}
     back_track_flag = False
@@ -351,7 +258,7 @@ def astar(initial_state, final_state,vel_l, vel_r, R, L):
         if(check_goal(node[4],final_state)):
             print("\nGoal Reached!")
             back_track_flag = True
-            back_track(initial_state,node[4],closed_list, trajectory_dict, veloc_dict)
+            back_track(initial_state,node[4], closed_list, canvas, trajectory_dict, veloc_dict)
             break
 
         present_c2c = node[1]
@@ -550,6 +457,9 @@ def astar(initial_state, final_state,vel_l, vel_r, R, L):
 
 
 def vel_calc(Thetai, UL, UR, r, L):
+    '''
+    Calculates the linear and angular velocity of the robot 
+    '''
     UL = UL*2*np.pi/60
     UR = UR*2*np.pi/60
     thetan = 3.14 * Thetai / 180
@@ -564,8 +474,9 @@ def vel_calc(Thetai, UL, UR, r, L):
 def publishVelocity(v_list):
     '''
     Publishes the velocity to /cmd_vel topic of the turtlebot
+    
     '''
-    print("V_list",v_list)
+    # print("V_list",v_list)
     endTime = rospy.Time.now() + rospy.Duration(1)
 
     while rospy.Time.now() < endTime:
@@ -575,26 +486,13 @@ def publishVelocity(v_list):
         rate.sleep()
     
 
-def back_track(initial_state, final_state, closed_list, trajectory_dict, veloc_dict):
-    """
+def back_track(initial_state, final_state, closed_list, canvas, trajectory_dict, veloc_dict):
+    '''
     Implements backtracking to the start node after reaching the goal node.
     This function is also used for visualization of explored nodes and computed path using OpenCV.
     A stack is used to store the intermediate nodes while transversing from the goal node to start node.
-    
-    Parameters:
-        initial_state: List
-                List of start node's x, y and theta parameters
-        
-        final_state: List
-                List of goal node's x, y and theta parameters 
-        closed_list: Dictionary
-                Dictionary containing explored nodes and corresponding parents  
-        canvas: NumPy array
-                Map matrix with drawn obstacles 
-    Returns:
-            None
-    """
 
+    '''
     # fourcc = cv2.VideoWriter_fourcc(*'XVID')    # Creating video writer to generate a video.
     # out = cv2.VideoWriter('A-Star-amalapak-okritvik_testCase.avi',fourcc,500,(canvas.shape[1],canvas.shape[0]))
     
@@ -605,19 +503,19 @@ def back_track(initial_state, final_state, closed_list, trajectory_dict, veloc_d
     
     # Visualizing the explored nodes
     keys = list(keys)
-    # for key in keys:
-    #     p_node = closed_list[tuple(key)]
-    #     print(p_node)
-    #     cv2.circle(canvas,(int(key[0]),int(key[1])),2,(0,0,255),-1)
-    #     cv2.circle(canvas,(int(p_node[0]),int(p_node[1])),2,(0,0,255),-1)
-    #     canvas = cv2.arrowedLine(canvas, (int(p_node[0]),int(p_node[1])), (int(key[0]),int(key[1])), (0,255,0), 1, tipLength = 0.2)
-    #     if(tuple(initial_state)!=tuple(key)):
-    #        traj = trajectory_dict[tuple(key)]
-    #        print(traj)
-    #         for i in range(0,len(traj)-1):
-    #             cv2.line(canvas,(int(round(traj[i][0])),int(round(traj[i][1]))), (int(round(traj[i+1][0])),int(round(traj[i+1][1]))), (0,255,0),1)            
-    #     cv2.imshow("A* Exploration and Optimal Path Visualization",canvas)
-    #     cv2.waitKey(1)
+    for key in keys:
+        p_node = closed_list[tuple(key)]
+        # print(p_node)
+        cv2.circle(canvas,(int(key[0]),int(canvas.shape[0]-1 - key[1])),2,(0,0,255),-1)
+        cv2.circle(canvas,(int(p_node[0]),int(canvas.shape[0]-1 - p_node[1])),2,(0,0,255),-1)
+        # canvas = cv2.arrowedLine(canvas, (int(p_node[0]),int(canvas.shape[0]-1 - p_node[1])), (int(key[0]),int(canvas.shape[0]-1 - key[1])), (0,255,0), 1, tipLength = 0.2)
+        if(tuple(initial_state)!=tuple(key)):
+            traj = trajectory_dict[tuple(key)]
+        #     # print(traj)
+            for i in range(0,len(traj)-1):
+                cv2.line(canvas,(int(round(traj[i][0])),int(round(canvas.shape[0]-1 - traj[i][1]))), (int(round(traj[i+1][0])),int(round(canvas.shape[0]-1 - traj[i+1][1]))), (0,255,0),1)            
+        # cv2.imshow("A* Exploration and Optimal Path Visualization",canvas)
+        # cv2.waitKey(1)
     #     out.write(canvas)
 
     parent_node = closed_list[tuple(final_state)]
@@ -637,12 +535,12 @@ def back_track(initial_state, final_state, closed_list, trajectory_dict, veloc_d
         path_node = path_stack.pop()
         print(path_node)
         traj = trajectory_dict[tuple(path_node)]
-        # for i in range(0,len(traj)-1):
-        #     cv2.line(canvas,(int(round(traj[i][0])),int(round(traj[i][1]))), (int(round(traj[i+1][0])),int(round(traj[i+1][1]))), (255,0,196),3)
-        # cv2.line(canvas,(int(start_node[0]),int(start_node[1])),(int(path_node[0]),int(path_node[1])),(0,0,255),5)
+        for i in range(0,len(traj)-1):
+            cv2.line(canvas,(int(round(traj[i][0])),int(round(canvas.shape[0]-1 - traj[i][1]))), (int(round(traj[i+1][0])),int(round(canvas.shape[0]-1 - traj[i+1][1]))), (255,0,196),3)
+        cv2.line(canvas,(int(start_node[0]),int(canvas.shape[0]-1 - start_node[1])),(int(path_node[0]),int(canvas.shape[0]-1 - path_node[1])),(0,0,255),5)
         # print(path_node)
         X_dot = veloc_dict[tuple(path_node)] 
-        print("X_DOT",X_dot)
+        # print("X_DOT",X_dot)
         start_node = path_node.copy()
         try:
             linear,angular = vel_calc(0, X_dot[0][0], X_dot[0][1], 3.8, 34)
@@ -650,7 +548,11 @@ def back_track(initial_state, final_state, closed_list, trajectory_dict, veloc_d
             # publishVelocity([(0,0,0)])
         except rospy.ROSInterruptException:
             pass
+        cv2.imshow("A* Exploration and Optimal Path Visualization",canvas)
+        cv2.waitKey(1)
         # out.write(canvas)
+    
+    # cv2.imwrite("optimal_path_turtlebot.png", canvas)
     publishVelocity([(0,0,0)])
        
     # out.release()
@@ -658,12 +560,34 @@ def back_track(initial_state, final_state, closed_list, trajectory_dict, veloc_d
 
 if __name__ == '__main__':
     
-    # canvas = np.ones((1000,1000,3), dtype="uint8")    # Creating a blank canvas/map
     clearance, robot_radius, vel_L, vel_R = take_robot_inputs()
     initial_state, final_state = take_map_inputs() #Take the start and goal node from the user
-        
-    fig, axes = plt.subplots()
-    
+
+    canvas = np.ones((1000,1000,3), dtype="uint8")    # Creating a blank canvas/map
+    height, width, _ = canvas.shape
+    offset = clearance + robot_radius
+    for i in range(width):
+        for j in range(height):
+
+            if(i<=offset) or (i>=(1000-offset)) or (j<=offset) or (j>=(1000-offset)):
+                canvas[j][i] = [255, 0 , 0]
+
+            if ((i-200)**2+(j-800)**2-((offset+100)**2))<=0:
+                canvas[j][i] = [255, 255 , 0]
+
+            if ((i-200)**2+(j-200)**2-((offset+100)**2))<=0:
+                canvas[j][i] = [255, 255 , 0]
+
+            if (j>=(425)+offset) and (j<=(575)-offset) and (i>=25-offset) and (i<=175+offset):
+                canvas[j][i] = [255, 255 , 0]
+
+            if (j>=(425)+offset) and (j<=(575)-offset) and (i>=375-offset) and (i<=625+offset):
+                canvas[j][i] = [255, 255 , 0]
+                
+            if (j>=(200)+offset) and (j<=(400)-offset) and (i>=725-offset) and (i<=875+offset):
+                canvas[1000-j][i] = [255, 255 , 0]
+
+
     # Uncomment the below 3 lines to view the obstacle space. Press Any Key to close the image window
     # cv2.imshow("Canvas",canvas)
     # cv2.waitKey(0)
@@ -671,20 +595,13 @@ if __name__ == '__main__':
 
     print(initial_state, final_state)
 
-    # Converting the angles with respect to the image coordinates
-    # if initial_state[2] != 0:
-    #     initial_state[2] = 360 - initial_state[2]
-
     start_time = time.time()
-
-    # axes.plot(initial_state[0],initial_state[1],'r')
-    # axes.plot(final_state[0],final_state[1],'g')
     
     R = 3.8
     L = 34
     vel_L = (2 * np.pi * vel_L)/60
     vel_R = (2 * np.pi * vel_R)/60
     
-    astar(initial_state,final_state, vel_L, vel_R, R, L)    # Compute the optimal path using A* Algorithm
+    astar(initial_state,final_state, vel_L, vel_R, R, L, canvas)    # Compute the optimal path using A* Algorithm
     end_time = time.time()    # Time taken for the algorithm to find the optimal path
     print("\nCode Execution Time (sec): ", end_time-start_time)    # Computes & prints the total execution time
