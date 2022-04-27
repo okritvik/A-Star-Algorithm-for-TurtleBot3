@@ -26,7 +26,7 @@ Note: Make sure TurtleBot3 packages are installed in your catkin workspace.
 
 ## Test Case: 
 
-Video Link: https://youtu.be/-I0wi999_Vg </br></br>
+Video Link: https://youtu.be/jGtCYTHbNvk </br></br>
   [co-ordinates with respect to bottom left corner origin of the map in the PPT (scaled by 100)]  
   
 Note: The origin in Gazebo is in the center whereas the origin defined in the PPT is in the bottom-left corner.
